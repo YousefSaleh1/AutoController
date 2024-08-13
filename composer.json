@@ -1,0 +1,23 @@
+{
+    "name": "coding-partners/auto-controller",
+    "description": "The \"Auto Controller\" package for Laravel allows you to quickly generate fully functional controllers for any model in your application. With a single command, the package will create a controller with all the standard CRUD (Create, Read, Update, Delete) methods, saving you significant time and effort. This enables you to focus on building the core features of your project.",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "CodingPartners\\AutoController\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Yousef Saleh",
+            "email": "yousefsaleh.888.it@gmail.com"
+        },
+        {
+            "name": "Ayham Ibrahim",
+            "email": "ayhamib99@gmail.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {}
+}
