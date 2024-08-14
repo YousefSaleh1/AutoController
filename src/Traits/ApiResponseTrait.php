@@ -64,28 +64,11 @@ trait ApiResponseTrait
     /**
      * Return a paginated JSON Response
      *
-     * @param Illuminate\Pagination\LengthAwarePaginator $paginator the paginator instance
+     * @param $data the data that will be paginated
      * @param string $message the success message
      * @param int $status the HTTP Status code
      * @return \Illuminate\Http\JsonResponse The JSON response
      */
-    public function paginated(LengthAwarePaginator $paginator,$message = 'Operation Success',$status = 200){
-        return response()->json([
-            'status' => 'success',
-            'message'=>trans($message),
-            'data'=>$paginator->item(),
-            'pagination' => [
-                'total'        => $paginator->total(),
-                'count'        => $paginator->count(),
-                'per_page'     => $paginator->perPage(),
-                'current_page' => $paginator->currentPage(),
-                'total_pages'  => $paginator->lastPage(),
-            ],
-        ], $status);
-    }
-
-
-    //this function do the same functionality of the previous paginated function , but accepts resources as input
     public function resourcePaginated($data,$message = 'Operation Success',$status = 200){
         $paginator = $data->resource;
         $resourceData = $data->items();
