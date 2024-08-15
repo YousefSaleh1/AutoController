@@ -79,10 +79,24 @@ trait FileStorageTrait
         if (isset($file)) {
             return null;
         }
-        $filePath = public_path($old_file);
+        $this->deleteFile($old_file);
+        return $this->storeFile($file, $folderName);
+    }
+
+    /**
+     * Delete the specified file.
+     *
+     * This method takes a file path as input and deletes the corresponding file from the public directory.
+     * It first checks if the file exists at the given file path, and if it does, it deletes the file using the `unlink()` function.
+     *
+     * @param string $file The file path of the file to be deleted.
+     * @return void
+     */
+    public function deleteFile($file)
+    {
+        $filePath = public_path($file);
         if (file_exists($filePath)) {
             unlink($filePath);
         }
-        return $this->storeFile($file, $folderName);
     }
 }
