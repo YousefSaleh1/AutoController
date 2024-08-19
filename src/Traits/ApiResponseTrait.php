@@ -2,8 +2,6 @@
 
 namespace CodingPartners\AutoController\Traits;
 
-use Illuminate\Pagination\LengthAwarePaginator;
-
 trait ApiResponseTrait
 {
 
