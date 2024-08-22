@@ -6,7 +6,10 @@
     "autoload": {
         "psr-4": {
             "CodingPartners\\AutoController\\": "src/"
-        }
+        },
+        "files": [
+            "CodingPartners/AutoController/Helpers/CustomHelpers.php"
+        ]
     },
     "authors": [
         {

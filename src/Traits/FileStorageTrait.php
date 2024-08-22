@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Storage;
 
 trait FileStorageTrait
 {
+    use ApiResponseTrait;
+
     /**
      *  Store photo and protect the site
      *
@@ -16,7 +18,7 @@ trait FileStorageTrait
      * @param  file  $file The name of the file input field in the request.
      * @return string|null The url the photo url.
      */
-    public function storeFile($file, string $folderName)
+    public function storeFile($file, string $folderName, $suffix)
     {
         // $file = $request->file;
         $originalName = $file->getClientOriginalName();
@@ -25,15 +27,44 @@ trait FileStorageTrait
         if (preg_match('/\.[^.]+\./', $originalName)) {
             throw new Exception(trans('general.notAllowedAction'), 403);
         }
+        switch ($suffix) {
+            case 'img':
+                //validate the mime type and extentions
+                $allowedMimeTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-ms-wmv'];
+                $allowedExtensions = ['jpeg', 'png', 'gif', 'jpg', 'jfif'];
+                break;
 
-        //validate the mime type and extentions
-        $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
-        $allowedExtensions = ['jpeg', 'png', 'gif', 'jpg'];
-        $mime_type = $file->getClientMimeType();
-        $extension = $file->getClientOriginalExtension();
-        //validate the mime type and extentions
-        $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jfif'];
-        $allowedExtensions = ['jpeg', 'png', 'gif', 'jpg', 'jfif'];
+            case 'vid':
+                //validate the mime type and extentions
+                $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jfif'];
+                $allowedExtensions = ['mp4', 'webm', 'ogg', 'mov', 'wmv'];
+                break;
+
+            case 'aud':
+                //validate the mime type and extentions
+                $allowedMimeTypes = ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/aac'];
+                $allowedExtensions = ['mp3', 'wav', 'ogg', 'aac'];
+                break;
+
+            case 'docs':
+                //validate the mime type and extentions
+                $allowedMimeTypes = [
+                    'application/pdf',
+                    'application/msword',
+                    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    'application/vnd.ms-excel',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'application/vnd.ms-powerpoint',
+                    'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+                ];
+                $allowedExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
+                break;
+
+            default:
+                throw new Exception($this->errorResponse(null, 'wrong data', 400));
+                break;
+        }
+
         $mime_type = $file->getClientMimeType();
         $extension = $file->getClientOriginalExtension();
 
@@ -74,13 +105,13 @@ trait FileStorageTrait
      * @param  string  $fileColumnName The name of the file input field in the request.
      * @return string|null The file path if the file exists, otherwise null.
      */
-    public function fileExists($file, $old_file, string $folderName)
+    public function fileExists($file, $old_file, string $folderName, $suffix)
     {
         if (isset($file)) {
             return null;
         }
         $this->deleteFile($old_file);
-        return $this->storeFile($file, $folderName);
+        return $this->storeFile($file, $folderName, $suffix);
     }
 
     /**

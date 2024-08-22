@@ -2,7 +2,10 @@
 
 namespace CodingPartners\AutoController\Traits\Generates;
 
+use CodingPartners\AutoController\Helpers\helper;
 use Illuminate\Support\Str;
+
+use function CodingPartners\AutoController\Helpers\getSuffix;
 
 trait GenerateService
 {
@@ -78,9 +81,9 @@ class {$serviceName}
         return "/**
      * list all {$models} information
      */
-    public function list{$model}() {
+    public function list{$model}(int \$perPage) {
         try {
-            return {$model}::paginate(10);
+            return {$model}::paginate(\$perPage);
         } catch (Exception \$e) {
             Log::error('Error Listing {$model} '. \$e->getMessage());
             throw new Exception(\$this->errorResponse(null,'there is something wrong in server',500));
@@ -105,8 +108,9 @@ class {$serviceName}
         $assignments = "";
         foreach ($columns as $column) {
             if (!in_array($column, ['id', 'created_at', 'updated_at'])) {
-                if (Str::endsWith($column, '_img')) {
-                    $assignments .= "\n            '$column' => \$this->storeFile(\$fieldInputs[\"$column\"], \"{$model}\"),";
+                if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
+                    $suffix= helper::getSuffix($column);
+                    $assignments .= "\n            '$column' => \$this->storeFile(\$fieldInputs[\"$column\"], \"{$model}\", \"{$suffix}\"),";
                 } else {
                     $assignments .= "\n            '$column' => \$fieldInputs[\"$column\"],";
                 }
@@ -118,8 +122,9 @@ class {$serviceName}
      * @param array \$fieldInputs
      * @return \App\Models\\{$model}
      */
-    public function create{$model}(array \$fieldInputs){
-        try {
+    public function create{$model}(array \$fieldInputs)
+    {
+        try{
             return {$model}::create([{$assignments}
             ]);
         } catch (Exception \$e) {
@@ -180,8 +185,9 @@ class {$serviceName}
         $assignments = "[";
         foreach ($columns as $column) {
             if ($column !== 'id' && $column !== 'created_at' && $column !== 'updated_at') {
-                if (Str::endsWith($column, '_img')) {
-                    $assignments .= "\n        \"$column\" => \$this->fileExists(\$fieldInputs[\"$column\"], \${$model}->$column, \"{$model}\"),";
+                if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
+                    $suffix= helper::getSuffix($column);
+                    $assignments .= "\n        \"$column\" => \$this->fileExists(\$fieldInputs[\"$column\"], \${$model}->$column, \"{$model}\", \"{$suffix}\"),";
                 } else {
                     $assignments .= "\n        \"$column\" => \$fieldInputs[\"$column\"],";
                 }
@@ -218,7 +224,7 @@ class {$serviceName}
      * The method is designed to handle any exceptions that may occur during the delete process and logs the error message to the system log.
      *
      * @param \App\Models\\{$model} \${$model} The model instance to be deleted.
-     * @return void
+     * @return string
      */
     protected function generateDeleteMethodInService($model, $columns)
     {
