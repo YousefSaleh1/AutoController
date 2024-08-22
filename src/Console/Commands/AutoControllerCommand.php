@@ -2,18 +2,19 @@
 
 namespace CodingPartners\AutoController\Console\Commands;
 
-use CodingPartners\AutoController\Traits\Generates\GenerateContoller;
-use CodingPartners\AutoController\Traits\Generates\GenerateFormRequest;
-use CodingPartners\AutoController\Traits\Generates\GenerateResource;
-use CodingPartners\AutoController\Traits\Generates\GenerateRoutes;
-use CodingPartners\AutoController\Traits\Generates\GenerateService;
+use Illuminate\Support\Str;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Str;
+use CodingPartners\AutoController\Traits\Generates\GenerateRoutes;
+use CodingPartners\AutoController\Traits\Generates\GenerateService;
+use CodingPartners\AutoController\Traits\Generates\GenerateResource;
+use CodingPartners\AutoController\Traits\Generates\GenerateFormRequest;
+use CodingPartners\AutoController\Traits\Generates\ControllerWithService;
+use CodingPartners\AutoController\Traits\Generates\ControllerWithoutService;
 
 class AutoControllerCommand extends Command
 {
-    use GenerateContoller, GenerateFormRequest, GenerateService, GenerateResource, GenerateRoutes;
+    use ControllerWithService ,ControllerWithoutService, GenerateFormRequest, GenerateService, GenerateResource, GenerateRoutes;
 
     protected $signature = 'crud:generate {model}';
     protected $description = 'Generate CRUD operations for a model';
@@ -21,7 +22,7 @@ class AutoControllerCommand extends Command
     /**
      * Handles the main logic of the command.
      *
-     * This method is responsible for generating CRUD operations for a given model.
+     * This method is responsible for generating CRUD soperations for a given model.
      * It first checks if the specified table exists in the database. If not, it displays an error message and returns.
      * Then, it retrieves the columns of the table and proceeds to generate the necessary files for CRUD operations.
      *
@@ -52,11 +53,19 @@ class AutoControllerCommand extends Command
         $this->info("Generating Resource for $model...");
         $this->generateResource($model, $columns);
 
-        $this->info("Generating Service for $model...");
-        $this->generateService($model, $columns);
+        // Ask the user if they want to generate a service file
+        $generateService = $this->confirm("Do you want to generate a Service for $model?");
 
-        $this->info("Generating CRUD for $model...");
-        $this->generateController($model, $columns);
+        if ($generateService) {
+            $this->info("Generating Service for $model...");
+            $this->generateService($model, $columns);
+
+            $this->info("Generating CRUD with service for $model...");
+            $this->generateControllerWithService($model, $columns);
+        } else {
+            $this->info("Generating CRUD without service for $model...");
+            $this->generateControllerWithoutService($model, $columns);
+        }
 
         $this->info("Generating routes/api.php for $model...");
         $this->generateRoutes($model);
