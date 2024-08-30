@@ -54,6 +54,47 @@ php artisan crud:generate ModelName
     - If you answer `no`, only the controller will be generated.
 4. Finally, the necessary routes will be added to the `api.php` file.
 
+
+#### Example with Service
+```console
+EUROPELAPTOP@DESKTOP-P3SVV3J MINGW64 /d/CRUD
+$ php artisan crud:generate Post
+Generating store FormRequest for Post...
+FormRequest StorePostRequest created successfully in folder PostRequest.
+Generating update FormRequest for Post...
+FormRequest UpdatePostRequest created successfully in folder PostRequest.
+
+ Do you want to generate a Service for Post? (yes/no) [no]:
+ > yes
+
+Generating Service for Post...
+Service PostService created successfully.
+Generating CRUD with service for Post...
+Controller PostController created successfully.
+Generating routes/api.php for Post...
+Post Route added successfully.
+```
+
+#### Example without Service
+```console
+EUROPELAPTOP@DESKTOP-P3SVV3J MINGW64 /d/CRUD
+$ php artisan crud:generate User
+Generating store FormRequest for User...
+FormRequest StoreUserRequest created successfully in folder UserRequest.
+Generating update FormRequest for User...
+FormRequest UpdateUserRequest created successfully in folder UserRequest.
+Generating Resource for User...
+Resource UserResource created successfully.
+
+ Do you want to generate a Service for User? (yes/no) [no]:
+ >
+
+Generating CRUD without service for User...
+Controller UserController created successfully.
+Generating routes/api.php for User...
+User Route added successfully.
+```
+
 ## License
 
 This package is licensed under the [MIT License](https://opensource.org/licenses/MIT).
