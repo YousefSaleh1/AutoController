@@ -22,5 +22,12 @@
         }
     ],
     "minimum-stability": "dev",
-    "require": {}
+    "require": {
+        "php": "^8.0"
+    },
+    "extra": {
+        "laravel": {
+            "providers": "CodingPartners\\AutoController\\Providers\\AutoControllerServiceProvider"
+        }
+    }
 }
