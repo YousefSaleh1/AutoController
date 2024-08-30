@@ -8,7 +8,7 @@
             "CodingPartners\\AutoController\\": "src/"
         },
         "files": [
-            "CodingPartners/AutoController/Helpers/CustomHelpers.php"
+            "CodingPartners/AutoController/Helpers/helper.php"
         ]
     },
     "authors": [
