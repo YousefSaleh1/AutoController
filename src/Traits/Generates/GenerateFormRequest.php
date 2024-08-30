@@ -48,11 +48,20 @@ trait GenerateFormRequest
 
         // Check if the FormRequest class file exists, if not, create it
         if (!file_exists($requestPath)) {
+
+            $this->info("Generating store FormRequest for $model...");
+
             // Generate validation rules
             $rules = "";
             foreach ($columns as $column) {
                 if (Str::endsWith($column, '_img')) {
-                    $rules .= "\n            '{$column}' => 'required|file|image|mimes:png,jpg,jpeg,jfif|max:10000|mimetypes:image/jpeg,image/png,image/jpg,image/jfif',";
+                    $rules .= "\n            '{$column}' => 'required|file|image|mimes:png,jpg,jpeg,gif|max:10000|mimetypes:image/jpeg,image/png,image/jpg,image/gif',";
+                } elseif (Str::endsWith($column, '_vid')) {
+                    $rules .= "\n            '{$column}' => 'required|file|mimes:mp4, webm, ogg, mov, wmv|max:10000|mimetypes:video/mp4, video/webm, video/ogg, video/quicktime, video/x-ms-wmv',";
+                } elseif (Str::endsWith($column, '_aud')) {
+                    $rules .= "\n            '{$column}' => 'required|file|mimes:mp3, wav, ogg, aac|max:10000|mimetypes:audio/mpeg, audio/wav, audio/ogg, audio/aac',";
+                } elseif (Str::endsWith($column, '_docs')) {
+                    $rules .= "\n            '{$column}' => 'required|file|mimes:pdf, doc, docx, xls, xlsx, ppt, pptx|max:10000|mimetypes:application/pdf, application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document, application/vnd.ms-excel, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-powerpoint, application/vnd.openxmlformats-officedocument.presentationml.presentation',";
                 } else {
                     $rules .= "\n            '{$column}' => ['required'],";
                 }
@@ -62,9 +71,18 @@ trait GenerateFormRequest
 namespace App\Http\Requests\\{$folderName};
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use CodingPartners\AutoController\Traits\ApiResponseTrait;
 
 class {$requestName} extends FormRequest
 {
+    use ApiResponseTrait;
+
+    // stop validation in the first failure
+    protected \$stopOnFirstFailure = false;
+
+
     /**
      * Determine if the user is authorized to make this request.
      *
@@ -83,6 +101,28 @@ class {$requestName} extends FormRequest
     public function rules()
     {
         return [{$rules}
+        ];
+    }
+
+    /**
+     *  method handles failure of Validation and return message
+     * @param \Illuminate\Contracts\Validation\Validator \$Validator
+     * @throws \Illuminate\Http\Exceptions\HttpResponseException
+     * @return never
+     */
+    protected function failedValidation(Validator \$Validator){
+        \$errors = \$Validator->errors()->all();
+        throw new HttpResponseException(\$this->errorResponse(\$errors,'Validation error',422));
+    }
+
+    /**
+     * Get the validation messagges that returned in response.
+     *
+     * @return array
+     */
+    public function messages() {
+        return [
+            //
         ];
     }
 }\n";
@@ -132,11 +172,20 @@ class {$requestName} extends FormRequest
 
         // Check if the FormRequest class file exists, if not, create it
         if (!file_exists($requestPath)) {
+
+            $this->info("Generating update FormRequest for $model...");
+
             // Generate validation rules
             $rules = "";
             foreach ($columns as $column) {
                 if (Str::endsWith($column, '_img')) {
-                    $rules .= "\n            '{$column}' => 'nullable|file|image|mimes:png,jpg,jpeg,jfif|max:10000|mimetypes:image/jpeg,image/png,image/jpg,image/jfif',";
+                    $rules .= "\n            '{$column}' => 'nullable|file|image|mimes:png,jpg,jpeg,gif|max:10000|mimetypes:image/jpeg,image/png,image/jpg,image/gif',";
+                } elseif (Str::endsWith($column, '_vid')) {
+                    $rules .= "\n            '{$column}' => 'nullable|file|mimes:mp4,webm,ogg,mov,wmv|max:10000|mimetypes:video/mp4,video/webm, video/ogg,video/quicktime,video/x-ms-wmv',";
+                } elseif (Str::endsWith($column, '_aud')) {
+                    $rules .= "\n            '{$column}' => 'nullable|file|mimes:mp3,wav,ogg,aac|max:10000|mimetypes:audio/mpeg,audio/wav,audio/ogg,audio/aac',";
+                } elseif (Str::endsWith($column, '_docs')) {
+                    $rules .= "\n            '{$column}' => 'nullable|file|mimes:pdf,doc,docx,xls,xlsx,ppt,pptx|max:10000|mimetypes:application/pdf,application/msword, application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation',";
                 } else {
                     $rules .= "\n            '{$column}' => ['nullable'],";
                 }
@@ -146,9 +195,17 @@ class {$requestName} extends FormRequest
 namespace App\Http\Requests\\{$folderName};
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Http\Exceptions\HttpResponseException;
+use CodingPartners\AutoController\Traits\ApiResponseTrait;
 
 class {$requestName} extends FormRequest
 {
+    use ApiResponseTrait;
+
+    // stop validation in the first failure
+    protected \$stopOnFirstFailure = false;
+
     /**
      * Determine if the user is authorized to make this request.
      *
@@ -169,6 +226,29 @@ class {$requestName} extends FormRequest
         return [{$rules}
         ];
     }
+
+    /**
+     *  method handles failure of Validation and return message
+     * @param \Illuminate\Contracts\Validation\Validator \$Validator
+     * @throws \Illuminate\Http\Exceptions\HttpResponseException
+     * @return never
+     */
+    protected function failedValidation(Validator \$Validator){
+        \$errors = \$Validator->errors()->all();
+        throw new HttpResponseException(\$this->errorResponse(\$errors,'Validation error',422));
+    }
+
+    /**
+     * Get the validation messagges that returned in response.
+     *
+     * @return array
+     */
+    public function messages() {
+        return [
+            //
+        ];
+    }
+
 }\n";
             file_put_contents($requestPath, $requestContent);
             $this->info("FormRequest $requestName created successfully in folder $folderName.");

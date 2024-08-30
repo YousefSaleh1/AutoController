@@ -47,12 +47,14 @@ trait GenerateResource
         // Check if the Resource class file exists, if not, create it
         if (!file_exists($resourcePath)) {
 
+            $this->info("Generating Resource for $model...");
+
             $assignments = "";
             foreach ($columns as $column) {
-                if (!Str::endsWith($column, '_img')) {
-                    $assignments .= "\n            '{$column}' => \$this->$column,";
-                } else {
+                if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
                     $assignments .= "\n            '{$column}' => asset(\$this->$column),";
+                } else {
+                    $assignments .= "\n            '{$column}' => \$this->$column,";
                 }
             }
 

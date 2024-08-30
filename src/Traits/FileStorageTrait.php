@@ -30,13 +30,13 @@ trait FileStorageTrait
         switch ($suffix) {
             case 'img':
                 //validate the mime type and extentions
-                $allowedMimeTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-ms-wmv'];
-                $allowedExtensions = ['jpeg', 'png', 'gif', 'jpg', 'jfif'];
+                $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif'];
+                $allowedExtensions = ['jpeg', 'png', 'gif', 'jpg'];
                 break;
 
             case 'vid':
                 //validate the mime type and extentions
-                $allowedMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/jfif'];
+                $allowedMimeTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-ms-wmv'];
                 $allowedExtensions = ['mp4', 'webm', 'ogg', 'mov', 'wmv'];
                 break;
 
@@ -61,12 +61,15 @@ trait FileStorageTrait
                 break;
 
             default:
-                throw new Exception($this->errorResponse(null, 'wrong data', 400));
+                throw new Exception(trans('general.wrong data'));
                 break;
         }
 
         $mime_type = $file->getClientMimeType();
         $extension = $file->getClientOriginalExtension();
+
+        // throw new Exception("mime_type: $mime_type, extension: $extension", 1);
+
 
         if (!in_array($mime_type, $allowedMimeTypes) || !in_array($extension, $allowedExtensions)) {
             throw new Exception(trans('general.invalidFileType'), 403);

@@ -5,8 +5,6 @@ namespace CodingPartners\AutoController\Traits\Generates;
 use CodingPartners\AutoController\Helpers\helper;
 use Illuminate\Support\Str;
 
-use function CodingPartners\AutoController\Helpers\getSuffix;
-
 trait GenerateService
 {
     /**
@@ -21,7 +19,7 @@ trait GenerateService
      * @param array $columns The columns of the model.
      * @return void
      */
-    protected function generateService($model, $columns)
+    protected function generateService($model, $columns, $softDeleteMethods)
     {
         $serviceName = $model . 'Service';
         $sevicePath = app_path("Services/{$serviceName}.php");
@@ -34,6 +32,8 @@ trait GenerateService
         // Check if the Resource class file exists, if not, create it
         if (!file_exists($sevicePath)) {
 
+            $this->info("Generating Service for $model...");
+
             $srviceContent = "<?php
 
 namespace App\Services;
@@ -43,6 +43,7 @@ use App\Models\\$model;
 use Illuminate\Support\Facades\Log;
 use CodingPartners\AutoController\Traits\ApiResponseTrait;
 use CodingPartners\AutoController\Traits\FileStorageTrait;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class {$serviceName}
 {
@@ -56,8 +57,11 @@ class {$serviceName}
 
     {$this->generateUpdateMethodInService($model,$columns)}
 
-    {$this->generateDeleteMethodInService($model,$columns)}
-}\n         ";
+    {$this->generateDeleteMethodInService($model,$columns,$softDeleteMethods)}\n";
+
+            if ($softDeleteMethods) {
+                $srviceContent .= "{$this->generateSoftDeleteMethodsInService($model,$columns)}\n\n}";
+            }
             file_put_contents($sevicePath, $srviceContent);
             $this->info("Service $serviceName created successfully.");
         }
@@ -86,7 +90,7 @@ class {$serviceName}
             return {$model}::paginate(\$perPage);
         } catch (Exception \$e) {
             Log::error('Error Listing {$model} '. \$e->getMessage());
-            throw new Exception(\$this->errorResponse(null,'there is something wrong in server',500));
+            throw new Exception('there is something wrong in server');
         }
     }";
     }
@@ -107,12 +111,12 @@ class {$serviceName}
     {
         $assignments = "";
         foreach ($columns as $column) {
-            if (!in_array($column, ['id', 'created_at', 'updated_at'])) {
+            if (!in_array($column, ['id', 'created_at', 'updated_at', 'deleted_at'])) {
                 if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
-                    $suffix= helper::getSuffix($column);
-                    $assignments .= "\n            '$column' => \$this->storeFile(\$fieldInputs[\"$column\"], \"{$model}\", \"{$suffix}\"),";
+                    $suffix = helper::getSuffix($column);
+                    $assignments .= "\n                    '$column' => \$this->storeFile(\$fieldInputs[\"$column\"], \"{$model}\", \"{$suffix}\"),";
                 } else {
-                    $assignments .= "\n            '$column' => \$fieldInputs[\"$column\"],";
+                    $assignments .= "\n                    '$column' => \$fieldInputs[\"$column\"],";
                 }
             }
         }
@@ -129,7 +133,7 @@ class {$serviceName}
             ]);
         } catch (Exception \$e) {
             Log::error('Error creating {$model}: ' . \$e->getMessage());
-            throw new Exception(\$this->errorResponse(null,'there is something wrong in server',500));
+            throw new Exception('there is something wrong in server');
         }
     }
     ";
@@ -184,12 +188,12 @@ class {$serviceName}
     {
         $assignments = "[";
         foreach ($columns as $column) {
-            if ($column !== 'id' && $column !== 'created_at' && $column !== 'updated_at') {
+            if (!in_array($column, ['id', 'created_at', 'updated_at', 'deleted_at'])) {
                 if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
-                    $suffix= helper::getSuffix($column);
-                    $assignments .= "\n        \"$column\" => \$this->fileExists(\$fieldInputs[\"$column\"], \${$model}->$column, \"{$model}\", \"{$suffix}\"),";
+                    $suffix = helper::getSuffix($column);
+                    $assignments .= "\n                    \"$column\" => \$this->fileExists(\$fieldInputs[\"$column\"], \${$model}->$column, \"{$model}\", \"{$suffix}\"),";
                 } else {
-                    $assignments .= "\n        \"$column\" => \$fieldInputs[\"$column\"],";
+                    $assignments .= "\n                    \"$column\" => \$fieldInputs[\"$column\"],";
                 }
             }
         }
@@ -209,7 +213,7 @@ class {$serviceName}
             return \${$model};
         } catch (Exception \$e) {
             Log::error('Error updating {$model}: ' . \$e->getMessage());
-            throw new Exception(\$this->errorResponse(null,'there is something wrong in server',500));
+            throw new Exception('there is something wrong in server');
         }
     }";
     }
@@ -217,21 +221,28 @@ class {$serviceName}
     /**
      * Generate the delete method for the specified model.
      *
-     * This method generates the implementation of the delete method for a given model.
-     * It iterates through the provided columns and checks if the column name ends with '_img'.
-     * If it does, it appends a call to the `deleteFile()` method to delete the associated file.
-     * Finally, it deletes the model instance.
-     * The method is designed to handle any exceptions that may occur during the delete process and logs the error message to the system log.
+     * This method generates the implementation of the `delete` method for a given model within a service class.
+     * It iterates through the provided columns and checks if any column name ends with specific suffixes like '_img', '_vid', '_aud', or '_doc'.
+     * If such columns are found and the model does not use soft deletes, it appends a call to the `deleteFile()` method to delete the associated files (e.g., images, videos, audios, documents).
+     * After handling any file deletions, the method proceeds to delete the model instance itself.
+     * The method is designed to handle any exceptions that may occur during the delete process. If an error occurs,
+     * it logs the error message to the system log and throws a new exception with a generic error response.
      *
-     * @param \App\Models\\{$model} \${$model} The model instance to be deleted.
-     * @return string
+     * @param string $model The name of the model for which the delete method is being generated.
+     * @param array $columns An array of column names to be checked for associated files.
+     * @param bool $softDelete Indicates whether the model uses soft deletes.
+     *                         If false, associated files will be deleted before deleting the model instance.
+     *
+     * @return string The generated delete method code.
      */
-    protected function generateDeleteMethodInService($model, $columns)
+    protected function generateDeleteMethodInService($model, $columns, $softDelete)
     {
         $assignments = "";
-        foreach ($columns as $column) {
-            if (Str::endsWith($column, '_img')) {
-                $assignments .= "\n        \$this->deleteFile(\${$model}->{$column});";
+        if (!$softDelete) {
+            foreach ($columns as $column) {
+                if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
+                    $assignments .= "\n        \$this->deleteFile(\${$model}->{$column});";
+                }
             }
         }
 
@@ -246,7 +257,146 @@ class {$serviceName}
             \${$model}->delete();
         } catch (Exception \$e) {
             Log::error('Error deleting {$model} '. \$e->getMessage());
-            throw new Exception(\$this->errorResponse(null,'there is something wrong in server',500));
+            throw new Exception('there is something wrong in server');
+        }
+    }";
+    }
+
+    /**
+     * Generate the soft delete-related methods for the specified model.
+     *
+     * This method generates the implementation of methods related to soft deletes for a given model.
+     * It creates the following methods:
+     *  - A method to retrieve soft-deleted (trashed) records.
+     *  - A method to restore soft-deleted records.
+     *  - A method to permanently delete (force delete) soft-deleted records, including handling any associated files (e.g., images, videos, audios, documents).
+     *
+     * @param string $model The name of the model for which the soft delete methods are being generated.
+     * @param array $columns The columns of the model, used to handle associated files during force delete.
+     *
+     * @return string The generated soft delete-related methods code.
+     */
+    protected function generateSoftDeleteMethodsInService($model, $columns)
+    {
+        return "
+    {$this->generateTrashedMethodsInService($model)}
+
+    {$this->generateRestoreMethodInService($model)}
+
+    {$this->generateForceDeleteMethodInService($model,$columns)}
+";
+    }
+
+    /**
+     * Generate the method for retrieving trashed (soft deleted) resources for the specified model.
+     *
+     * This method creates the `trashed` method for a given model's controller, which retrieves and
+     * paginates a list of soft-deleted (trashed) resources. The paginated data is then returned as
+     * a resource collection.
+     *
+     * @param string $model The name of the model for which the trashed method is being generated.
+     *
+     * @return string The generated trashed method code.
+     */
+    protected function generateTrashedMethodsInService($model)
+    {
+        return "/**
+     * Display a paginated listing of the trashed (soft deleted) resources.
+     */
+    public function trashedList{$model}(\$perPage)
+    {
+        try {
+            return {$model}::onlyTrashed()->paginate(\$perPage);
+        } catch (Exception \$e) {
+            Log::error('Error Trashing {$model} '. \$e->getMessage());
+            throw new Exception('there is something wrong in server');
+        }
+    }";
+    }
+
+    /**
+     * Generate the method for restoring a trashed (soft deleted) resource for the specified model.
+     *
+     * This method creates the `restore` method for a given model's controller, which allows restoring
+     * a soft-deleted resource by its ID. If the resource is successfully restored, a success response
+     * with the restored resource data is returned. If the resource is not found or an error occurs during
+     * the restoration process, appropriate exceptions are thrown.
+     *
+     * @param string $model The name of the model for which the restore method is being generated.
+     *
+     * @return string The generated restore method code.
+     */
+    protected function generateRestoreMethodInService($model)
+    {
+        return "/**
+     * Restore a trashed (soft deleted) resource by its ID.
+     *
+     * @param  int  \$id  The ID of the trashed {$model} to be restored.
+     * @return \App\Models\\{$model}
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException If the {$model} with the given ID is not found.
+     * @throws \Exception If there is an error during the restore process.
+     */
+    public function restore{$model}(\$id)
+    {
+        try{
+            \${$model} = {$model}::onlyTrashed()->findOrFail(\$id);
+            \${$model}->restore();
+            return \${$model};
+        } catch (ModelNotFoundException \$e) {
+            Log::error('{$model} not found: ' . \$e->getMessage());
+            throw new Exception('{$model} not found.');
+        } catch (Exception \$e) {
+            Log::error('Error restoring {$model}: ' . \$e->getMessage());
+            throw new Exception('there is something wrong in server');
+        }
+    }";
+    }
+
+    /**
+     * Generate the method for permanently deleting a trashed (soft deleted) resource for the specified model.
+     *
+     * This method creates the `forceDelete` method for a given model's controller, allowing the permanent
+     * deletion of a soft-deleted resource by its ID. Before deletion, it checks if the resource contains
+     * any associated files (e.g., images, videos, audio, documents) and deletes them. If the resource is
+     * successfully deleted, a success response is returned. If the resource is not found or an error occurs
+     * during the deletion process, appropriate exceptions are thrown.
+     *
+     * @param string $model The name of the model for which the force delete method is being generated.
+     * @param array $columns The columns of the model, used to determine if any associated files should be deleted.
+     *
+     * @return string The generated force delete method code.
+     */
+    protected function generateForceDeleteMethodInService($model, $columns)
+    {
+        $assignments = "";
+        foreach ($columns as $column) {
+            if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
+                $assignments .= "\n        \$this->deleteFile(\${$model}->{$column});";
+            }
+        }
+
+        return "/**
+     * Permanently delete a trashed (soft deleted) resource by its ID.
+     *
+     * @param  int  \$id  The ID of the trashed {$model} to be permanently deleted.
+     * @return void
+     *
+     * @throws \Illuminate\Database\Eloquent\ModelNotFoundException If the {$model} with the given ID is not found.
+     * @throws \Exception If there is an error during the force delete process.
+     */
+    public function forceDelete{$model}(\$id)
+    {
+        try{
+            \${$model} = {$model}::onlyTrashed()->findOrFail(\$id);
+            {$assignments}
+            \${$model}->forceDelete();
+        } catch (ModelNotFoundException \$e) {
+            Log::error('{$model} not found: ' . \$e->getMessage());
+            throw new Exception('{$model} not found.');
+        } catch (Exception \$e) {
+            Log::error('Error force deleting {$model} '. \$e->getMessage());
+            throw new Exception('there is something wrong in server');
         }
     }";
     }

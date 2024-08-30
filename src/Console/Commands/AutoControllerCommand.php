@@ -44,30 +44,27 @@ class AutoControllerCommand extends Command
         // Get a list of all the columns in the table
         $columns = Schema::getColumnListing($tableName);
 
-        $this->info("Generating store FormRequest for $model...");
+        // Check if the 'deleted_at' column exists in the table
+        $softDelete = in_array('deleted_at', $columns);
+
         $this->generateStoreFormRequest($model, $columns);
 
-        $this->info("Generating update FormRequest for $model...");
         $this->generateUpdateFormRequest($model, $columns);
 
-        $this->info("Generating Resource for $model...");
         $this->generateResource($model, $columns);
 
         // Ask the user if they want to generate a service file
         $generateService = $this->confirm("Do you want to generate a Service for $model?");
 
         if ($generateService) {
-            $this->info("Generating Service for $model...");
-            $this->generateService($model, $columns);
 
-            $this->info("Generating CRUD with service for $model...");
-            $this->generateControllerWithService($model, $columns);
+            $this->generateService($model, $columns, $softDelete);
+
+            $this->generateControllerWithService($model, $columns, $softDelete);
         } else {
-            $this->info("Generating CRUD without service for $model...");
-            $this->generateControllerWithoutService($model, $columns);
+            $this->generateControllerWithoutService($model, $columns, $softDelete);
         }
 
-        $this->info("Generating routes/api.php for $model...");
-        $this->generateRoutes($model);
+        $this->generateRoutes($model, $softDelete);
     }
 }
