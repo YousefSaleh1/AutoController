@@ -79,7 +79,9 @@ class {$controllerName} extends Controller
     {$this->generateDestroyMethod($model,$columns,$softDeleteMethods)}\n";
 
         if ($softDeleteMethods)
-            $content .= "{$this->generateSoftDeleteMethodsWithService($model)}\n\n}";
+            $content .= "{$this->generateSoftDeleteMethodsWithService($model)}";
+
+        $content .= "\n\n}";
 
         file_put_contents($controllerPath, $content);
 
