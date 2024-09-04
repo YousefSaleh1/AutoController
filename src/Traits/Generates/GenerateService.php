@@ -60,8 +60,11 @@ class {$serviceName}
     {$this->generateDeleteMethodInService($model,$columns,$softDeleteMethods)}\n";
 
             if ($softDeleteMethods) {
-                $srviceContent .= "{$this->generateSoftDeleteMethodsInService($model,$columns)}\n\n}";
+                $srviceContent .= "{$this->generateSoftDeleteMethodsInService($model,$columns)}";
             }
+
+            $srviceContent .= "\n\n}";
+            
             file_put_contents($sevicePath, $srviceContent);
             $this->info("Service $serviceName created successfully.");
         }
