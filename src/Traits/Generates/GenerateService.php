@@ -64,7 +64,7 @@ class {$serviceName}
             }
 
             $srviceContent .= "\n\n}";
-            
+
             file_put_contents($sevicePath, $srviceContent);
             $this->info("Service $serviceName created successfully.");
         }
@@ -112,15 +112,26 @@ class {$serviceName}
      */
     protected function generateCreateMethodInService($model, $columns)
     {
+        // Remove unwanted columns
+        $columns = array_filter($columns, function ($column) use ($model) {
+            // Common exclusions
+            $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at'];
+
+            // Additional exclusions for User model
+            if ($model === 'User') {
+                $excludedColumns = array_merge($excludedColumns, ['email_verified_at', 'remember_token']);
+            }
+
+            return !in_array($column, $excludedColumns);
+        });
+
         $assignments = "";
         foreach ($columns as $column) {
-            if (!in_array($column, ['id', 'created_at', 'updated_at', 'deleted_at'])) {
-                if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
-                    $suffix = helper::getSuffix($column);
-                    $assignments .= "\n                    '$column' => \$this->storeFile(\$fieldInputs[\"$column\"], \"{$model}\", \"{$suffix}\"),";
-                } else {
-                    $assignments .= "\n                    '$column' => \$fieldInputs[\"$column\"],";
-                }
+            if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
+                $suffix = helper::getSuffix($column);
+                $assignments .= "\n                    '$column' => \$this->storeFile(\$fieldInputs[\"$column\"], \"{$model}\", \"{$suffix}\"),";
+            } else {
+                $assignments .= "\n                    '$column' => \$fieldInputs[\"$column\"],";
             }
         }
 
@@ -189,16 +200,27 @@ class {$serviceName}
      */
     protected function generateUpdateMethodInService($model, $columns)
     {
+        // Remove unwanted columns
+        $columns = array_filter($columns, function ($column) use ($model) {
+            // Common exclusions
+            $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at'];
+
+            // Additional exclusions for User model
+            if ($model === 'User') {
+                $excludedColumns = array_merge($excludedColumns, ['password', 'email_verified_at', 'remember_token']);
+            }
+
+            return !in_array($column, $excludedColumns);
+        });
+
         $assignments = "[";
         foreach ($columns as $column) {
-            if (!in_array($column, ['id', 'created_at', 'updated_at', 'deleted_at'])) {
                 if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
                     $suffix = helper::getSuffix($column);
                     $assignments .= "\n                    \"$column\" => \$this->fileExists(\$fieldInputs[\"$column\"], \${$model}->$column, \"{$model}\", \"{$suffix}\"),";
                 } else {
                     $assignments .= "\n                    \"$column\" => \$fieldInputs[\"$column\"],";
                 }
-            }
         }
         $assignments .= "\n        ]";
 

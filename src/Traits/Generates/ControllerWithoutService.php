@@ -129,15 +129,26 @@ class {$controllerName} extends Controller
      */
     protected function generateStore($model, array $columns)
     {
+        // Remove unwanted columns
+        $columns = array_filter($columns, function ($column) use ($model) {
+            // Common exclusions
+            $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at'];
+
+            // Additional exclusions for User model
+            if ($model === 'User') {
+                $excludedColumns = array_merge($excludedColumns, ['email_verified_at', 'remember_token']);
+            }
+
+            return !in_array($column, $excludedColumns);
+        });
+
         $assignments = "";
         foreach ($columns as $column) {
-            if (!in_array($column, ['id', 'created_at', 'updated_at'])) {
-                if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
-                    $suffix = helper::getSuffix($column);
-                    $assignments .= "\n                '$column' => \$this->storeFile(\$request->$column, \"{$model}\", \"{$suffix}\"),";
-                } else {
-                    $assignments .= "\n                '$column' => \$request->$column,";
-                }
+            if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
+                $suffix = helper::getSuffix($column);
+                $assignments .= "\n                '$column' => \$this->storeFile(\$request->$column, \"{$model}\", \"{$suffix}\"),";
+            } else {
+                $assignments .= "\n                '$column' => \$request->$column,";
             }
         }
 
@@ -197,16 +208,27 @@ class {$controllerName} extends Controller
      */
     protected function generateUpdate($model, array $columns)
     {
+        // Remove unwanted columns
+        $columns = array_filter($columns, function ($column) use ($model) {
+            // Common exclusions
+            $excludedColumns = ['id', 'created_at', 'updated_at', 'deleted_at'];
+
+            // Additional exclusions for User model
+            if ($model === 'User') {
+                $excludedColumns = array_merge($excludedColumns, ['password', 'email_verified_at', 'remember_token']);
+            }
+
+            return !in_array($column, $excludedColumns);
+        });
+
         $assignments = "[";
         foreach ($columns as $column) {
-            if ($column !== 'id' && $column !== 'created_at' && $column !== 'updated_at') {
                 if (Str::endsWith($column, '_img') || Str::endsWith($column, '_vid') || Str::endsWith($column, '_aud') || Str::endsWith($column, '_doc')) {
                     $suffix = helper::getSuffix($column);
                     $assignments .= "\n                \"$column\" => \$this->fileExists(\$request->$column, \${$model}->$column, \"{$model}\", \"{$suffix}\"),";
                 } else {
                     $assignments .= "\n                \"$column\" => \$request->$column,";
                 }
-            }
         }
         $assignments .= "\n        ]";
 
